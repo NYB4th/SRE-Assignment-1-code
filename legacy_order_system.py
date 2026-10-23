@@ -1,41 +1,82 @@
-"""SREE practical starter: deliberately untidy legacy order calculator.
-Do not use this file for real payments. All prices are in PKR.
-"""
+from typing import List, Dict, Any
 
-def order_total(items, customer_type, delivery):
-    total = 0
+# Named Constants for Discounts and Delivery Fees (PKR)
+DISCOUNT_RATES: Dict[str, float] = {
+    "student": 0.10,
+    "staff": 0.05,
+}
+
+DELIVERY_FEES: Dict[str, float] = {
+    "express": 250.0,
+    "standard": 100.0,
+}
+
+
+def calculate_subtotal(items: List[Dict[str, Any]]) -> float:
+
+    # Calculate the sum total of all items before discounts or shipping
+    subtotal = 0.0
     for item in items:
-        if item['category'] == 'book':
-            total = total + item['price'] * item['qty']
-        elif item['category'] == 'electronics':
-            total = total + item['price'] * item['qty']
-        else:
-            total = total + item['price'] * item['qty']
-    if customer_type == 'student':
-        total = total - (total * 0.1)
-    elif customer_type == 'staff':
-        total = total - (total * 0.05)
-    if delivery == 'express':
-        total = total + 250
-    elif delivery == 'standard':
-        total = total + 100
+
+        # Reject negative quantities/prices
+        if item.get("qty", 0) < 0:
+            raise ValueError(
+                f"Quantity cannot be negative for item '{item.get('name')}'."
+            )
+        if item.get("price", 0) < 0:
+            raise ValueError(f"Price cannot be negative for item '{item.get('name')}'.")
+
+        subtotal += item["price"] * item["qty"]
+    return subtotal
+
+
+def calculate_discount(subtotal: float, customer_type: str) -> float:
+
+    # Calculate the discount amount based on customer type.
+    rate = DISCOUNT_RATES.get(customer_type, 0.0)
+    return subtotal * rate
+
+
+def calculate_delivery_fee(delivery: str) -> float:
+
+    # Determine delivery fee based on selected delivery method
+    return DELIVERY_FEES.get(delivery, 0.0)
+
+
+def order_total(
+    items: List[Dict[str, Any]], customer_type: str, delivery: str
+) -> float:
+    # Calculate the final order total including discounts and delivery charges
+    subtotal = calculate_subtotal(items)
+    discount = calculate_discount(subtotal, customer_type)
+    delivery_fee = calculate_delivery_fee(delivery)
+
+    total = (subtotal - discount) + delivery_fee
     return round(total, 2)
 
 
-def print_receipt(items, customer_type, delivery):
+def print_receipt(
+    items: List[Dict[str, Any]], customer_type: str, delivery: str
+) -> str:
+
+    # Format and generate a printable order receipt string
     amount = order_total(items, customer_type, delivery)
-    result = 'ORDER RECEIPT\n'
+
+    receipt_lines = ["ORDER RECEIPT"]
     for item in items:
-        result += str(item['qty']) + ' x ' + item['name'] + ' = ' + str(item['price'] * item['qty']) + '\n'
-    result += 'Customer: ' + customer_type + '\n'
-    result += 'Delivery: ' + delivery + '\n'
-    result += 'Total: ' + str(amount)
-    return result
+        item_total = item["price"] * item["qty"]
+        receipt_lines.append(f"{item['qty']} x {item['name']} = {item_total}")
+
+    receipt_lines.append(f"Customer: {customer_type}")
+    receipt_lines.append(f"Delivery: {delivery}")
+    receipt_lines.append(f"Total: {amount}")
+
+    return "\n".join(receipt_lines)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sample = [
-        {'name': 'Notebook', 'category': 'book', 'price': 300, 'qty': 2},
-        {'name': 'USB Drive', 'category': 'electronics', 'price': 800, 'qty': 1},
+        {"name": "Notebook", "category": "book", "price": 300, "qty": 2},
+        {"name": "USB Drive", "category": "electronics", "price": 800, "qty": 1},
     ]
-    print(print_receipt(sample, 'student', 'standard'))
+    print(print_receipt(sample, "student", "standard"))
