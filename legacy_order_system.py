@@ -12,20 +12,22 @@ DELIVERY_FEES: Dict[str, float] = {
 }
 
 
+def validate_items(items: List[Dict[str, Any]]) -> None:
+
+    # Corrective fix: a negative price or quantity raises ValueError
+    # instead of silently lowering the total
+    for item in items:
+        if item["qty"] < 0:
+            raise ValueError(f"Quantity cannot be negative for item '{item['name']}'.")
+        if item["price"] < 0:
+            raise ValueError(f"Price cannot be negative for item '{item['name']}'.")
+
+
 def calculate_subtotal(items: List[Dict[str, Any]]) -> float:
 
     # Calculate the sum total of all items before discounts or shipping
     subtotal = 0.0
     for item in items:
-
-        # Reject negative quantities/prices
-        if item.get("qty", 0) < 0:
-            raise ValueError(
-                f"Quantity cannot be negative for item '{item.get('name')}'."
-            )
-        if item.get("price", 0) < 0:
-            raise ValueError(f"Price cannot be negative for item '{item.get('name')}'.")
-
         subtotal += item["price"] * item["qty"]
     return subtotal
 
@@ -47,6 +49,7 @@ def order_total(
     items: List[Dict[str, Any]], customer_type: str, delivery: str
 ) -> float:
     # Calculate the final order total including discounts and delivery charges
+    validate_items(items)
     subtotal = calculate_subtotal(items)
     discount = calculate_discount(subtotal, customer_type)
     delivery_fee = calculate_delivery_fee(delivery)
